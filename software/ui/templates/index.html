@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Defense Node Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="title">Defense Node Network</div>
+        <div class="subtitle">Local Dashboard</div>
+      </div>
+    </div>
+
+    <div class="right">
+      <span class="pill" id="conn-pill">Backend: connecting…</span>
+      <button class="btn" id="refresh-btn">Refresh</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="grid">
+      <div class="card">
+        <div class="card-head">
+          <h2>Nearby Nodes</h2>
+          <span class="muted" id="nodes-meta">—</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Node</th>
+                <th>Quality</th>
+                <th>RSSI</th>
+                <th>Last Seen</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="nodes-tbody">
+              <tr><td colspan="5" class="muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Traffic</h2>
+          <span class="muted" id="packets-meta">—</span>
+        </div>
+
+        <div class="toolbar">
+          <input class="input" id="filter" placeholder="Filter by node id / type…" />
+          <select class="select" id="dir">
+            <option value="">All</option>
+            <option value="rx">RX</option>
+            <option value="tx">TX</option>
+            <option value="fwd">FWD</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Dir</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Type</th>
+                <th>Bytes</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="packets-tbody">
+              <tr><td colspan="7" class="muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
