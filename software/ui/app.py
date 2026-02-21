@@ -109,6 +109,17 @@ def disconnect_serial():
     else:
         return jsonify({"message": "Failed to disconnect from serial port"}), 500
 
+@app.route("/api/serial/send", methods=["POST"])
+@login_required
+def send_serial():
+    command = request.json.get("command", "").strip()
+    if not command:
+        return jsonify({"message": "No command provided"}), 400
+    if serial_comm.send(command):
+        return jsonify({"message": "Command sent"})
+    else:
+        return jsonify({"message": "Failed to send — not connected"}), 500
+
 @app.route("/api/serial/stream")
 @login_required
 def stream_serial():

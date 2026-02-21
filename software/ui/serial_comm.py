@@ -38,6 +38,18 @@ def receive():
         except OSError:
             break
 
+def send(command):
+    global ser
+    if ser is None or not ser.is_open:
+        return False
+    try:
+        ser.write((command.strip() + "\n").encode("utf-8"))
+        ser.flush()
+        return True
+    except (serial.SerialException, OSError) as e:
+        print(f"Error writing to serial: {e}")
+        return False
+
 def parse_data(data):
     try:
         if not data:
@@ -76,6 +88,19 @@ def parse_data(data):
             return {
                 'type': 'reinstate',
                 'id': data[1],
+                'timestamp': time.time()
+            }
+        elif data[0] == '$ID':
+            return {
+                'type': 'identity',
+                'id': data[1],
+                'timestamp': time.time()
+            }
+        elif data[0] == '$MYPOS':
+            return {
+                'type': 'mypos',
+                'lat': data[1],
+                'lon': data[2],
                 'timestamp': time.time()
             }
         else:
