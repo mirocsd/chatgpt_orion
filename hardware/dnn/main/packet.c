@@ -1,4 +1,6 @@
 #include "packet.h"
+#include "simulate.h"
+#include "crypto.h"
 #include <string.h>
 #include "esp_log.h"
 
@@ -26,5 +28,34 @@ void process_packet(packet_t *pkt)
 {
     ESP_LOGI(TAG, "from=0x%02x seq=%u type=0x%02x",
              pkt->sender_id, pkt->seq_num, pkt->type);
-    ESP_LOG_BUFFER_HEX_LEVEL(TAG, pkt->payload, sizeof(pkt->payload), ESP_LOG_INFO);
+
+    switch (pkt->type) {
+    case 0x00:
+        ESP_LOGI(TAG, "Beacon from node 0x%02x", pkt->sender_id);
+        break;
+    case 0x01: {
+        position_t pos;
+        memcpy(&pos, pkt->payload, sizeof(pos));
+        ESP_LOGI(TAG, "Position: lat=%.6f lon=%.6f", pos.lat, pos.lon);
+        break;
+    }
+    case 0x02:
+        ESP_LOGI(TAG, "Message: %.*s", (int)sizeof(pkt->payload), (char *)pkt->payload);
+        break;
+    case 0x03: {
+        uint8_t target = pkt->payload[0];
+        ESP_LOGW(TAG, "Revoke node 0x%02x (by 0x%02x)", target, pkt->sender_id);
+        crypto_revoke_node(target);
+        break;
+    }
+    case 0x04: {
+        uint8_t target = pkt->payload[0];
+        ESP_LOGI(TAG, "Reinstate node 0x%02x (by 0x%02x)", target, pkt->sender_id);
+        crypto_reinstate_node(target);
+        break;
+    }
+    default:
+        ESP_LOG_BUFFER_HEX_LEVEL(TAG, pkt->payload, sizeof(pkt->payload), ESP_LOG_INFO);
+        break;
+    }
 }

@@ -1,6 +1,7 @@
 #include "mesh.h"
 #include "packet.h"
 #include "cache.h"
+#include "crypto.h"
 #include "mirf.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -16,21 +17,32 @@ void mesh_init(void)
 
 void mesh_handle_packet(NRF24_t *dev, packet_t *pkt, uint8_t my_id) 
 {
+    if (pkt->sender_id == my_id)
+        return;
+
     if (seen_cache_contains(&g_cache, pkt->sender_id, pkt->seq_num))
         return;
 
     seen_cache_add(&g_cache, pkt->sender_id, pkt->seq_num);
 
+    if (!verify_packet(pkt)) {
+        ESP_LOGW("MESH", "Auth failed from 0x%02x seq=%u, dropping",
+                 pkt->sender_id, pkt->seq_num);
+        return;
+    }
+
     if (pkt->ttl == 0)
         return;
-
-    if (pkt->recipient_id == my_id || pkt->recipient_id == 0xFF)
-        process_packet(pkt);
 
     if (pkt->recipient_id != my_id) {
         pkt->ttl--;
         vTaskDelay(pdMS_TO_TICKS(esp_random() % 45 + 5));
         mesh_send(dev, pkt);
+    }
+
+    if (pkt->recipient_id == my_id || pkt->recipient_id == 0xFF) {
+        decrypt_packet(pkt);
+        process_packet(pkt);
     }
 }
 
