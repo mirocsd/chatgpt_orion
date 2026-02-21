@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign in</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container" style="max-width:520px;">
+    <div class="card" style="padding:18px;margin-top:22px;">
+      <h2 style="margin:0 0 6px 0;">Sign in</h2>
+      <div class="muted" style="margin-bottom:14px;">Please authenticate to access the service.</div>
+
+      {% if error %}
+        <div class="pill" style="border-color: rgba(255,80,80,.35); color: rgba(255,180,180,.95);">
+          {{ error }}
+        </div>
+        <div style="height:10px;"></div>
+      {% endif %}
+
+      <form method="POST" style="display:flex; flex-direction:column; gap:10px;">
+        <input class="input" name="username" placeholder="Username" required>
+        <input class="input" name="password" type="password" placeholder="Password" required>
+        <button class="btn" type="submit">Sign in</button>
+      </form>
+      <div class="muted" style="margin-top:12px;">
+        Don’t have an account?
+        <a href="/signup" style="color: rgba(232,236,255,.9);">Create one</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
