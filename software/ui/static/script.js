@@ -13,6 +13,10 @@ const portRefreshBtn = document.getElementById("port-refresh-btn");
 const serialConnectBtn = document.getElementById("serial-connect-btn");
 const serialStatus = document.getElementById("serial-status");
 
+const radarCanvas = document.getElementById("radar");
+const radarCtx = radarCanvas ? radarCanvas.getContext("2d") : null;
+const radarModeEl = document.getElementById("radar-mode");
+
 const STALE_MS = 30_000;
 const OFFLINE_MS = 120_000;
 
@@ -34,6 +38,116 @@ function escapeHtml(s){
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
+}
+
+function stableAngleFromId(id){
+  const s = String(id || "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return (h % 360) * Math.PI / 180;
+}
+
+function drawRadar(){
+  if (!radarCtx || !radarCanvas) return;
+
+  const W = radarCanvas.width;
+  const H = radarCanvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.42;
+
+  radarCtx.clearRect(0, 0, W, H);
+
+  radarCtx.strokeStyle = "rgba(255,255,255,.12)";
+  radarCtx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++){
+    radarCtx.beginPath();
+    radarCtx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2);
+    radarCtx.stroke();
+  }
+  radarCtx.beginPath(); radarCtx.moveTo(cx - R, cy); radarCtx.lineTo(cx + R, cy); radarCtx.stroke();
+  radarCtx.beginPath(); radarCtx.moveTo(cx, cy - R); radarCtx.lineTo(cx, cy + R); radarCtx.stroke();
+
+  radarCtx.fillStyle = "rgba(0,255,170,1)";
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+  radarCtx.fill();
+
+  const nodes = Object.values(nodesMap).filter(n => n && n.id);
+  const hasLocalGps = localNode.lat != null && localNode.lon != null;
+
+  if (radarModeEl){
+    radarModeEl.textContent = hasLocalGps ? "Mode: GPS" : "Mode: estimated";
+  }
+
+  if (hasLocalGps){
+    const lat0 = Number(localNode.lat);
+    const lon0 = Number(localNode.lon);
+
+    const gpsNodes = nodes.filter(n => n.lat != null && n.lon != null && !n.revoked);
+    if (!gpsNodes.length) return;
+
+    const pts = gpsNodes.map(n => {
+      const { x, y } = gpsToMeters(Number(n.lat), Number(n.lon), lat0, lon0);
+      return { n, x, y, d: Math.hypot(x, y) };
+    });
+    const maxD = Math.max(1, ...pts.map(p => p.d));
+    const scale = R / maxD;
+
+    for (const p of pts){
+      const px = cx + p.x * scale;
+      const py = cy - p.y * scale;
+
+      const status = getNodeStatus(p.n);
+      const color = status === "online" ? "rgba(0,255,170,1)"
+                  : status === "stale"  ? "rgba(255,196,0,1)"
+                  : "rgba(255,80,80,1)";
+
+      radarCtx.fillStyle = color;
+      radarCtx.beginPath();
+      radarCtx.arc(px, py, 4, 0, Math.PI * 2);
+      radarCtx.fill();
+
+      radarCtx.fillStyle = "rgba(232,236,255,.85)";
+      radarCtx.font = "12px ui-sans-serif, system-ui";
+      radarCtx.fillText(fmtHex(p.n.id), px + 7, py - 7);
+    }
+    return;
+  }
+
+  for (const n of nodes){
+    const status = getNodeStatus(n);
+    const angle = stableAngleFromId(n.id);
+    const dist = R * estimatedDistance01(n);
+
+    const px = cx + Math.cos(angle) * dist;
+    const py = cy + Math.sin(angle) * dist;
+
+    const color = status === "online" ? "rgba(0,255,170,1)"
+                : status === "stale"  ? "rgba(255,196,0,1)"
+                : "rgba(255,80,80,1)";
+
+    radarCtx.fillStyle = color;
+    radarCtx.beginPath();
+    radarCtx.arc(px, py, 4, 0, Math.PI * 2);
+    radarCtx.fill();
+
+    radarCtx.fillStyle = "rgba(232,236,255,.85)";
+    radarCtx.font = "12px ui-sans-serif, system-ui";
+    radarCtx.fillText(fmtHex(n.id), px + 7, py - 7);
+  }
+}
+
+function estimatedDistance01(node){
+
+  const age = Date.now() - (node.last_seen || 0);
+  const t = Math.max(0, Math.min(1, age / OFFLINE_MS));
+  return 0.2 + 0.8 * t; 
+}
+
+function gpsToMeters(lat, lon, lat0, lon0){
+  const x = (lon - lon0) * 111320 * Math.cos(lat0 * Math.PI / 180); 
+  const y = (lat - lat0) * 110540; 
+  return { x, y };
 }
 
 function statusBadge(status){
@@ -125,6 +239,7 @@ function renderNodes(){
       <td>${statusBadge(getNodeStatus(n))}</td>
     </tr>
   `).join("");
+  drawRadar();
 }
 
 function applyPacketFilters(list){
@@ -220,6 +335,7 @@ function startSerialStream() {
 function updateLocalInfo() {
   const idStr = localNode.id ? `Node ${fmtHex(localNode.id)}` : "";
   const posStr = localNode.lat && localNode.lon ? `${localNode.lat}, ${localNode.lon}` : "";
+  drawRadar();
   const localNodeId = document.getElementById("local-node-id");
   const localNodePos = document.getElementById("local-node-pos");
   if (localNodeId) localNodeId.textContent = idStr || "Querying…";
