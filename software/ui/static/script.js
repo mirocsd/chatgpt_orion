@@ -8,8 +8,24 @@ const filterInput = document.getElementById("filter");
 const dirSelect = document.getElementById("dir");
 const refreshBtn = document.getElementById("refresh-btn");
 
-let nodesCache = [];
+const portSelect = document.getElementById("port-select");
+const portRefreshBtn = document.getElementById("port-refresh-btn");
+const serialConnectBtn = document.getElementById("serial-connect-btn");
+const serialStatus = document.getElementById("serial-status");
+
+const STALE_MS = 30_000;
+const OFFLINE_MS = 120_000;
+
+let nodesMap = {};
 let packetsCache = [];
+let serialConnected = false;
+let localNode = { id: null, lat: null, lon: null };
+
+function fmtHex(id) {
+  if (!id) return "—";
+  const s = String(id).replace(/^0x/i, "").toUpperCase();
+  return "0x" + s;
+}
 
 function escapeHtml(s){
   return String(s)
@@ -55,20 +71,58 @@ function fmtTime(ts){
   return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
 }
 
+function getNodeStatus(node) {
+  const age = Date.now() - node.last_seen;
+  if (node.revoked) return "offline";
+  if (age > OFFLINE_MS) return "offline";
+  if (age > STALE_MS) return "stale";
+  return "online";
+}
+
+function fmtAge(ms) {
+  const sec = Math.round((Date.now() - ms) / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  return `${Math.floor(sec / 60)}m ${sec % 60}s ago`;
+}
+
+function updateNode(data) {
+  const id = data.id;
+  if (!id) return;
+
+  const existing = nodesMap[id] || { id, last_seen: 0, revoked: false };
+
+  if (data.type === "revoke") {
+    existing.revoked = true;
+  } else if (data.type === "reinstate") {
+    existing.revoked = false;
+  }
+
+  existing.last_seen = Date.now();
+
+  if (data.type === "position") {
+    existing.lat = data.lat;
+    existing.lon = data.lon;
+  }
+
+  nodesMap[id] = existing;
+  renderNodes();
+}
+
 function renderNodes(){
-  if (!nodesCache.length){
-    nodesTbody.innerHTML = `<tr><td colspan="5" class="muted">No nodes yet.</td></tr>`;
+  const nodes = Object.values(nodesMap);
+  if (!nodes.length){
+    nodesTbody.innerHTML = `<tr><td colspan="4" class="muted">No nodes yet.</td></tr>`;
     nodesMeta.textContent = "0 nodes";
     return;
   }
-  nodesMeta.textContent = `${nodesCache.length} nodes`;
-  nodesTbody.innerHTML = nodesCache.map(n => `
+  nodes.sort((a, b) => b.last_seen - a.last_seen);
+  nodesMeta.textContent = `${nodes.length} nodes`;
+  nodesTbody.innerHTML = nodes.map(n => `
     <tr>
-      <td><strong>${escapeHtml(n.node_id ?? n.id ?? "—")}</strong></td>
-      <td>${qualityBar(n.quality)}</td>
-      <td class="muted">${escapeHtml(n.rssi ?? "—")}</td>
-      <td class="muted">${escapeHtml(n.last_seen ?? (n.last_seen_ms ? `${Math.round(n.last_seen_ms/1000)}s ago` : "—"))}</td>
-      <td>${statusBadge(n.status)}</td>
+      <td><strong>${escapeHtml(fmtHex(n.id))}</strong></td>
+      <td class="muted">${escapeHtml(n.lat && n.lon ? `${n.lat}, ${n.lon}` : "—")}</td>
+      <td class="muted">${fmtAge(n.last_seen)}</td>
+      <td>${statusBadge(getNodeStatus(n))}</td>
     </tr>
   `).join("");
 }
@@ -113,25 +167,214 @@ async function fetchJson(url){
   return await res.json();
 }
 
-async function refresh(){
-  try{
-    connPill.textContent = "Backend: online";
-    nodesCache = await fetchJson("/api/nodes");
-    packetsCache = await fetchJson("/api/packets?limit=200");
-    renderNodes();
+function refresh(){
+  renderNodes();
+  renderPackets();
+}
+
+let serialSource = null;
+
+function startSerialStream() {
+  if (serialSource) serialSource.close();
+
+  serialSource = new EventSource("/api/serial/stream");
+
+  serialSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "identity") {
+      localNode.id = data.id;
+      updateLocalInfo();
+      return;
+    }
+    if (data.type === "mypos") {
+      localNode.lat = data.lat;
+      localNode.lon = data.lon;
+      updateLocalInfo();
+      return;
+    }
+
+    updateNode(data);
+    packetsCache.unshift({
+      ts: data.timestamp,
+      dir: "IN",
+      from: fmtHex(data.id),
+      to: localNode.id ? fmtHex(localNode.id) : "LOCAL",
+      type: data.type ?? "—",
+      bytes: "—",
+      result: "OK",
+    });
+    if (packetsCache.length > 500) packetsCache.length = 500;
     renderPackets();
-  }catch(e){
-    connPill.textContent = "Backend: offline";
-    nodesTbody.innerHTML = `<tr><td colspan="5" class="muted">Backend not responding.</td></tr>`;
-    packetsTbody.innerHTML = `<tr><td colspan="7" class="muted">Backend not responding.</td></tr>`;
-    nodesMeta.textContent = "—";
-    packetsMeta.textContent = "—";
+  };
+
+  serialSource.onerror = () => {
+    connPill.textContent = "Serial: disconnected";
+  };
+
+  serialSource.onopen = () => {
+    connPill.textContent = "Serial: streaming";
+  };
+}
+
+function updateLocalInfo() {
+  const idStr = localNode.id ? `Node ${fmtHex(localNode.id)}` : "";
+  const posStr = localNode.lat && localNode.lon ? `${localNode.lat}, ${localNode.lon}` : "";
+  const localNodeId = document.getElementById("local-node-id");
+  const localNodePos = document.getElementById("local-node-pos");
+  if (localNodeId) localNodeId.textContent = idStr || "Querying…";
+  if (localNodePos) localNodePos.textContent = posStr || "Unknown";
+  if (localNode.id) {
+    serialStatus.textContent = `Connected — Node ${fmtHex(localNode.id)}`;
   }
 }
+
+function stopSerialStream() {
+  if (serialSource) {
+    serialSource.close();
+    serialSource = null;
+    connPill.textContent = "Serial: closed";
+  }
+}
+
+async function loadPorts() {
+  portSelect.disabled = true;
+  try {
+    const ports = await fetchJson("/api/ports");
+    portSelect.innerHTML = '<option value="">Select a port…</option>';
+    ports.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.device;
+      opt.textContent = `${p.device} — ${p.description}`;
+      portSelect.appendChild(opt);
+    });
+  } catch {
+    portSelect.innerHTML = '<option value="">Failed to load ports</option>';
+  }
+  portSelect.disabled = false;
+}
+
+async function connectSerial() {
+  const port = portSelect.value;
+  if (!port) return;
+
+  serialConnectBtn.disabled = true;
+  try {
+    const res = await fetch("/api/serial/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ port }),
+    });
+    if (!res.ok) throw new Error("connect failed");
+    serialConnected = true;
+    serialConnectBtn.textContent = "Disconnect";
+    serialConnectBtn.classList.add("connected");
+    serialStatus.textContent = `Connected to ${port}`;
+    portSelect.disabled = true;
+    portRefreshBtn.disabled = true;
+    startSerialStream();
+    fetch("/api/serial/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: "id" }),
+    });
+  } catch {
+    serialStatus.textContent = "Connection failed";
+  }
+  serialConnectBtn.disabled = false;
+}
+
+async function disconnectSerial() {
+  serialConnectBtn.disabled = true;
+  stopSerialStream();
+  try {
+    await fetch("/api/serial/disconnect", { method: "POST" });
+  } catch { }
+  serialConnected = false;
+  localNode = { id: null, lat: null, lon: null };
+  serialConnectBtn.textContent = "Connect";
+  serialConnectBtn.classList.remove("connected");
+  serialStatus.textContent = "Disconnected";
+  const localNodeId = document.getElementById("local-node-id");
+  const localNodePos = document.getElementById("local-node-pos");
+  if (localNodeId) localNodeId.textContent = "—";
+  if (localNodePos) localNodePos.textContent = "—";
+  portSelect.disabled = false;
+  portRefreshBtn.disabled = false;
+  serialConnectBtn.disabled = false;
+}
+
+const cmdInput = document.getElementById("cmd-input");
+const cmdSendBtn = document.getElementById("cmd-send-btn");
+const cmdStatus = document.getElementById("cmd-status");
+
+async function sendCommand() {
+  const command = cmdInput.value.trim();
+  if (!command) return;
+  if (!serialConnected) {
+    cmdStatus.textContent = "Not connected";
+    return;
+  }
+
+  cmdSendBtn.disabled = true;
+  try {
+    const res = await fetch("/api/serial/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command }),
+    });
+    if (!res.ok) throw new Error("send failed");
+    const parts = command.split(" ");
+    const cmd = parts[0];
+    let to = "BROADCAST";
+    if (cmd === "msg" && parts[1]) to = fmtHex(parts[1]);
+    else if (cmd === "revoke" && parts[1]) to = fmtHex(parts[1]);
+    else if (cmd === "reinstate" && parts[1]) to = fmtHex(parts[1]);
+    packetsCache.unshift({
+      ts: Date.now() / 1000,
+      dir: "OUT",
+      from: localNode.id ? fmtHex(localNode.id) : "LOCAL",
+      to,
+      type: cmd,
+      bytes: "—",
+      result: "OK",
+    });
+    if (packetsCache.length > 500) packetsCache.length = 500;
+    renderPackets();
+    cmdStatus.textContent = `Sent: ${command}`;
+    cmdInput.value = "";
+  } catch {
+    cmdStatus.textContent = "Failed to send";
+  }
+  cmdSendBtn.disabled = false;
+}
+
+cmdSendBtn.addEventListener("click", sendCommand);
+cmdInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendCommand();
+});
+
+document.querySelectorAll(".cmd-shortcut").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const prefix = btn.dataset.prefix;
+    cmdInput.value = prefix;
+    cmdInput.focus();
+    if (prefix === "pos") sendCommand();
+  });
+});
+
+serialConnectBtn.addEventListener("click", () => {
+  if (serialConnected) disconnectSerial();
+  else connectSerial();
+});
+
+portRefreshBtn.addEventListener("click", loadPorts);
 
 filterInput.addEventListener("input", renderPackets);
 dirSelect.addEventListener("change", renderPackets);
 refreshBtn.addEventListener("click", refresh);
 
-refresh();
-setInterval(refresh, 2000);
+loadPorts();
+renderNodes();
+renderPackets();
+setInterval(refresh, 5000);

@@ -23,6 +23,30 @@
   </header>
 
   <main class="container">
+    <div class="serial-bar card">
+      <div class="card-head">
+        <h2>Serial Connection</h2>
+        <span class="muted" id="serial-status">Disconnected</span>
+      </div>
+      <div class="serial-controls">
+        <select class="select" id="port-select">
+          <option value="">Select a port…</option>
+        </select>
+        <button class="btn" id="port-refresh-btn" title="Refresh port list">&#x21bb;</button>
+        <button class="btn btn-connect" id="serial-connect-btn">Connect</button>
+      </div>
+      <div class="local-node-info">
+        <span class="local-node-field">
+          <span class="muted">Node ID</span>
+          <strong id="local-node-id">—</strong>
+        </span>
+        <span class="local-node-field">
+          <span class="muted">Position</span>
+          <strong id="local-node-pos">—</strong>
+        </span>
+      </div>
+    </div>
+
     <section class="grid">
       <div class="card">
         <div class="card-head">
@@ -35,14 +59,13 @@
             <thead>
               <tr>
                 <th>Node</th>
-                <th>Quality</th>
-                <th>RSSI</th>
+                <th>Position</th>
                 <th>Last Seen</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody id="nodes-tbody">
-              <tr><td colspan="5" class="muted">Loading…</td></tr>
+              <tr><td colspan="4" class="muted">No nodes yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -84,6 +107,29 @@
         </div>
       </div>
     </section>
+
+    <div class="card cmd-card">
+      <div class="card-head">
+        <h2>Command</h2>
+        <span class="muted" id="cmd-status"></span>
+      </div>
+      <div class="cmd-shortcuts">
+        <button class="btn cmd-shortcut" data-prefix="msg ">msg</button>
+        <button class="btn cmd-shortcut" data-prefix="pos">pos</button>
+        <button class="btn cmd-shortcut" data-prefix="revoke ">revoke</button>
+        <button class="btn cmd-shortcut" data-prefix="reinstate ">reinstate</button>
+      </div>
+      <div class="cmd-input-row">
+        <input class="input" id="cmd-input" placeholder="e.g. msg 0A hello world" autocomplete="off" />
+        <button class="btn btn-send" id="cmd-send-btn">Send</button>
+      </div>
+      <div class="cmd-help muted">
+        <code>msg &lt;hex_dest&gt; &lt;text&gt;</code> &nbsp;·&nbsp;
+        <code>pos</code> &nbsp;·&nbsp;
+        <code>revoke &lt;hex_id&gt;</code> &nbsp;·&nbsp;
+        <code>reinstate &lt;hex_id&gt;</code>
+      </div>
+    </div>
   </main>
 
   <script src="/static/script.js"></script>
