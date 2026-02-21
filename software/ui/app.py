@@ -12,9 +12,15 @@ packets = [
     {"type": "TX", "from": "ME", "to": "B4", "status": "sent"},
 ]
 
-@app.route("/")
-def home():
+
+@app.route("/dashboard")
+def dashboard():
     return render_template("index.html")
+
+@app.route("/")
+def landing():
+    return render_template("landing.html")
+
 
 @app.route("/api/nodes")
 def get_nodes():

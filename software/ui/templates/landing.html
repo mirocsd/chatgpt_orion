@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Defense Node Network</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="/static/Defense Node Network logo design.png" alt="Defense Node Network Logo" />
+      <div>
+        <div class="title">Defense Node Network</div>
+        <div class="subtitle">Secure Mesh Communication</div>
+      </div>
+    </div>
+    <div class="right">
+      <span class="pill">LoRa · AEAD · Mesh</span>
+      <a href="/dashboard"><button class="btn">Open Dashboard →</button></a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Hero -->
+    <section class="hero card">
+      <img class="hero-logo" src="/static/Defense Node Network logo design.png" alt="Defense Node Network Logo" />
+      <h1>Defense Node Network</h1>
+      <p class="hero-text">
+        A decentralized, cryptographically verified mesh network using LoRa radio communication.
+        Friendly vessels, drones, and stations can securely track each other and exchange messages —
+        no central infrastructure required.
+      </p>
+      <div class="hero-buttons">
+        <a href="#features"><button class="btn big-btn">Explore Architecture</button></a>
+        <a href="#protocol"><button class="btn big-btn">Message Format</button></a>
+        <a href="/dashboard"><button class="btn big-btn">Open Dashboard →</button></a>
+      </div>
+    </section>
+
+    <!-- Stats row -->
+    <section class="grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 18px;">
+      <div class="card" style="padding: 20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:4px;">LoRa</div>
+        <div class="muted">Radio Protocol</div>
+      </div>
+      <div class="card" style="padding: 20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:4px;">AEAD</div>
+        <div class="muted">Encryption</div>
+      </div>
+      <div class="card" style="padding: 20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:4px;">Mesh</div>
+        <div class="muted">Topology</div>
+      </div>
+      <div class="card" style="padding: 20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:4px;">P2P</div>
+        <div class="muted">No Central Server</div>
+      </div>
+      <div class="card" style="padding: 20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:4px;">Ed25519</div>
+        <div class="muted">Signatures</div>
+      </div>
+    </section>
+
+    <!-- Feature cards -->
+    <section id="features" style="margin-bottom: 18px;">
+      <div class="card">
+        <div class="card-head">
+          <h2>Core Features</h2>
+          <span class="muted">Architecture Overview</span>
+        </div>
+        <div class="features" style="padding: 16px;">
+          <div class="feature-card card">
+            <h3>🔐 Per-Node Identity</h3>
+            <p class="muted">Each node holds a unique public/private key pair. The public key identifies the node; the private key signs every outgoing message for tamper-proof authenticity.</p>
+          </div>
+          <div class="feature-card card">
+            <h3>📡 Smart Mesh Routing</h3>
+            <p class="muted">Nodes score neighbors by GPS proximity, LoRa signal strength, and last-seen time. Periodic beacons propagate presence and coordinates across the mesh automatically.</p>
+          </div>
+          <div class="feature-card card">
+            <h3>🛡️ Hop-by-Hop Verification</h3>
+            <p class="muted">At every relay hop, the forwarding node verifies the previous sender is an authorized network member before accepting and forwarding the message.</p>
+          </div>
+          <div class="feature-card card">
+            <h3>🔄 Duplicate Suppression</h3>
+            <p class="muted">Messages carry a <code>(sender_id, seq_num)</code> pair. Nodes track seen IDs and silently drop already-processed packets to prevent loops.</p>
+          </div>
+          <div class="feature-card card">
+            <h3>📍 Friendly Force Tracking</h3>
+            <p class="muted">All friendly vessels, drones, and stations maintain a live, authenticated position picture of every other node — no central server needed.</p>
+          </div>
+          <div class="feature-card card">
+            <h3>⚡ Packed C Structs</h3>
+            <p class="muted">Messages serialize as packed C structs to minimize over-the-air byte count — critical for LoRa's limited bandwidth and packet size constraints.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security + Routing cards -->
+    <section class="grid" style="margin-bottom: 18px;">
+      <div class="card">
+        <div class="card-head">
+          <h2>Verification Layer</h2>
+          <span class="badge online">
+            <span class="dot" style="background:#00ffaa;"></span> Active
+          </span>
+        </div>
+        <div style="padding: 16px 16px 20px;">
+          <p class="muted" style="line-height:1.7; margin-bottom: 14px;">
+            Every node is a cryptographic identity. Public keys are pre-programmed into every other node's memory before deployment — no key exchange needed in the field.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <span class="pill">✦ &nbsp;Unique keypair per node</span>
+            <span class="pill">✦ &nbsp;Public keys pre-shared before deployment</span>
+            <span class="pill">✦ &nbsp;Private key signs every outbound message</span>
+            <span class="pill">✦ &nbsp;Fallback: shared network key to reduce packet size</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Routing Layer</h2>
+          <span class="badge online">
+            <span class="dot" style="background:#00ffaa;"></span> Active
+          </span>
+        </div>
+        <div style="padding: 16px 16px 20px;">
+          <p class="muted" style="line-height:1.7; margin-bottom: 14px;">
+            The network is self-organizing. Each node maintains a scored neighbor table updated continuously by beacons, RSSI readings, and GPS coordinates.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <span class="pill">✦ &nbsp;Periodic beacons broadcast position + presence</span>
+            <span class="pill">✦ &nbsp;Neighbors scored by proximity, RSSI, recency</span>
+            <span class="pill">✦ &nbsp;Best-path algorithm selects optimal next hop</span>
+            <span class="pill">✦ &nbsp;No single point of failure</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Message format table -->
+    <section id="protocol" style="margin-bottom: 18px;">
+      <div class="card">
+        <div class="card-head">
+          <h2>Message Packet Structure</h2>
+          <span class="muted">Packed C Struct — AEAD Encrypted</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>msg_id</code></td>
+                <td class="muted">(sender_id, seq_num)</td>
+                <td class="muted">Unique message identifier. Prevents duplicate forwarding across the mesh.</td>
+                <td><span class="badge stale"><span class="dot" style="background:#ffc400;"></span>Identity</span></td>
+              </tr>
+              <tr>
+                <td><code>recipient_id</code></td>
+                <td class="muted">Node public key</td>
+                <td class="muted">Identifies the intended destination node.</td>
+                <td><span class="badge stale"><span class="dot" style="background:#ffc400;"></span>Routing</span></td>
+              </tr>
+              <tr>
+                <td><code>signature</code></td>
+                <td class="muted">Private key sig</td>
+                <td class="muted">Cryptographic signature over the full message. Verified at every hop.</td>
+                <td><span class="badge online"><span class="dot" style="background:#00ffaa;"></span>Auth</span></td>
+              </tr>
+              <tr>
+                <td><code>payload_len</code></td>
+                <td class="muted">Fixed enum value</td>
+                <td class="muted">Fixed-set length that also determines the payload type/schema.</td>
+                <td><span class="badge stale"><span class="dot" style="background:#ffc400;"></span>Meta</span></td>
+              </tr>
+              <tr>
+                <td><code>payload</code></td>
+                <td class="muted">Variable (typed)</td>
+                <td class="muted">The encrypted message body. Type inferred from payload_len.</td>
+                <td><span class="badge online"><span class="dot" style="background:#00ffaa;"></span>Encrypted</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footnote muted">
+          ⚠ Alternative: if per-node signature sizes exceed LoRa packet limits, a single shared network key may be used for AEAD encryption, with per-node keys reserved for beacon verification only.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</body>
+</html>
