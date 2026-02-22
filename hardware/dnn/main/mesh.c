@@ -17,7 +17,7 @@ void mesh_init(void)
 
 void mesh_handle_packet(NRF24_t *dev, packet_t *pkt, uint8_t my_id) 
 {
-    if (pkt->sender_id == my_id)
+    if (pkt->sender_id == my_id || pkt->sender_id == 0x00)
         return;
 
     if (seen_cache_contains(&g_cache, pkt->sender_id, pkt->seq_num))

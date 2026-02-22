@@ -49,6 +49,7 @@ static void handle_command(NRF24_t *dev, char *line, uint16_t *seq)
         encrypt_packet(&tx);
         mesh_send(dev, &tx);
         ESP_LOGI(TAG, "Sent pos lat=%.6f lon=%.6f", pos.lat, pos.lon);
+        printf("$MYPOS,%.6f,%.6f\n", pos.lat, pos.lon);
 
     } else if (strncmp(line, "revoke ", 7) == 0) {
         uint8_t target = (uint8_t)strtoul(line + 7, NULL, 16);
@@ -69,13 +70,15 @@ static void handle_command(NRF24_t *dev, char *line, uint16_t *seq)
         encrypt_packet(&tx);
         mesh_send(dev, &tx);
         ESP_LOGI(TAG, "Broadcast reinstate for node 0x%02x", target);
-
+    } else if (strncmp(line, "id", 2) == 0) {
+        printf("$ID,%02x\n", MY_NODE_ID);
     } else {
         ESP_LOGW(TAG, "Unknown command. Usage:");
         ESP_LOGW(TAG, "  msg <hex_dest> <text>   - send text message");
         ESP_LOGW(TAG, "  pos                     - send position");
         ESP_LOGW(TAG, "  revoke <hex_id>         - revoke a node");
         ESP_LOGW(TAG, "  reinstate <hex_id>      - reinstate a node");
+        ESP_LOGW(TAG, "  id                      - print my node id");
     }
 }
 
