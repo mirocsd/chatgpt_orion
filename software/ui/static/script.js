@@ -17,6 +17,10 @@ const radarCanvas = document.getElementById("radar");
 const radarCtx = radarCanvas ? radarCanvas.getContext("2d") : null;
 const radarModeEl = document.getElementById("radar-mode");
 
+const msgLog = document.getElementById("msg-log");
+const logMeta = document.getElementById("log-meta");
+const logClearBtn = document.getElementById("log-clear-btn");
+
 const STALE_MS = 30_000;
 const OFFLINE_MS = 120_000;
 
@@ -24,6 +28,32 @@ let nodesMap = {};
 let packetsCache = [];
 let serialConnected = false;
 let localNode = { id: null, lat: null, lon: null };
+
+const messageLog = [];
+const MAX_LOG_LINES = 300;
+
+function logLine(line){
+  if (!msgLog) return;
+
+  messageLog.push(line);
+  if (messageLog.length > MAX_LOG_LINES) messageLog.shift();
+
+  msgLog.textContent = messageLog.join("\n");
+  if (logMeta) logMeta.textContent = `${messageLog.length}`;
+  msgLog.scrollTop = msgLog.scrollHeight; // auto-scroll
+}
+
+function tsNow(){
+  return new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+}
+
+if (logClearBtn){
+  logClearBtn.addEventListener("click", () => {
+    messageLog.length = 0;
+    msgLog.textContent = "";
+    if (logMeta) logMeta.textContent = "0";
+  });
+}
 
 function fmtHex(id) {
   if (!id) return "—";
@@ -296,6 +326,13 @@ function startSerialStream() {
 
   serialSource.onmessage = (event) => {
     const data = JSON.parse(event.data);
+
+    const from = data.id ? fmtHex(data.id) : "—";
+    const type = data.type ?? "—";
+
+    const body = data.text ?? data.msg ?? data.payload ?? data.data ?? "";
+
+    logLine(`[${tsNow()}] ${type} from ${from}${body ? `: ${body}` : ""}`);
 
     if (data.type === "identity") {
       localNode.id = data.id;

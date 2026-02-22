@@ -59,8 +59,12 @@
                 <span class="muted">Radar View</span>
                 <span class="pill" id="radar-mode">Mode: estimating…</span>
             </div>
-            <canvas id="radar" width="360" height="360"></canvas>
-            <div class="muted" style="margin-top:8px;">
+
+            <div class="radar-canvas-wrap">
+                <canvas id="radar" width="360" height="360"></canvas>
+            </div>
+
+            <div class="muted">
                 Center = local node. Dots = nearby nodes.
             </div>
         </div>
@@ -141,6 +145,19 @@
         <code>reinstate &lt;hex_id&gt;</code>
       </div>
     </div>
+    <div class="card log-card">
+        <div class="card-head">
+            <h2>Messages</h2>
+            <div style="display:flex; gap:10px; align-items:center;">
+            <span class="muted" id="log-meta">0</span>
+            <button class="btn" id="log-clear-btn">Clear</button>
+            </div>
+        </div>
+
+        <div class="log-wrap">
+            <pre id="msg-log" class="msg-log"></pre>
+        </div>
+        </div>
   </main>
 
   <script src="/static/script.js"></script>
